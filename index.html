@@ -3,501 +3,477 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#287849">
-  <title>Registro de muestras bovinas</title>
+  <meta name="theme-color" content="#246b45">
+  <title>Muestreo de leche - Asociación de muestras</title>
 
-  <!-- Librerías para lectura de códigos de barras y exportación a Excel -->
+  <!-- Lector de códigos de barras -->
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- Exportación a Excel -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
   <style>
     :root {
-      --green: #287849;
-      --green-dark: #1d5d38;
+      --green: #246b45;
+      --green-dark: #194d32;
       --blue: #176b9b;
       --red: #b42318;
-      --bg: #eef2ef;
-      --text: #243328;
-      --muted: #647067;
-      --border: #d9e1db;
+      --bg: #f1f5f2;
+      --text: #203128;
+      --muted: #66736b;
+      --line: #d8e2da;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
-      padding: 18px 12px 36px;
+      padding: 18px 12px 40px;
       background: var(--bg);
       color: var(--text);
       font-family: Arial, Helvetica, sans-serif;
     }
-
-    .container { width: 100%; max-width: 620px; margin: 0 auto; }
-
-    h1 {
-      margin: 8px 0 18px;
-      text-align: center;
-      font-size: 25px;
-      letter-spacing: .3px;
-    }
-
-    h2 { margin: 0 0 12px; font-size: 19px; }
-
+    main { max-width: 720px; margin: auto; }
+    h1 { text-align: center; font-size: 25px; margin: 8px 0 5px; }
+    .subtitle { text-align: center; color: var(--muted); margin: 0 0 18px; font-size: 14px; }
     .card {
-      background: #fff;
-      border: 1px solid var(--border);
+      background: white;
+      border: 1px solid var(--line);
       border-radius: 14px;
       padding: 17px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 8px rgba(25, 55, 35, .045);
+      margin: 14px 0;
+      box-shadow: 0 2px 8px rgba(20, 50, 30, .04);
     }
-
+    h2 { margin: 0 0 12px; font-size: 19px; }
     p { line-height: 1.45; }
-
     textarea, input {
       width: 100%;
-      border: 1px solid #b9c5bc;
-      border-radius: 9px;
       padding: 13px;
+      border: 1px solid #bdc9c0;
+      border-radius: 9px;
       font: inherit;
       font-size: 16px;
+      background: white;
       color: var(--text);
-      background: #fff;
     }
-
-    textarea { resize: vertical; min-height: 145px; }
-
+    textarea { min-height: 150px; resize: vertical; }
     button {
       width: 100%;
+      min-height: 46px;
+      padding: 13px;
       border: 0;
       border-radius: 9px;
-      padding: 14px 12px;
       margin-top: 9px;
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      min-height: 46px;
     }
-
-    button:disabled { opacity: .5; cursor: not-allowed; }
-
-    .green { background: var(--green); color: #fff; }
-    .green:hover:not(:disabled) { background: var(--green-dark); }
-    .blue { background: var(--blue); color: #fff; }
-    .gray { background: #e6eee8; color: #245638; }
-    .red { background: #fff0ef; color: var(--red); border: 1px solid #f0c4c0; }
-
-    .hint { color: var(--muted); font-size: 13px; margin: 7px 0 0; }
+    button:disabled { opacity: .48; cursor: not-allowed; }
+    .primary { background: var(--green); color: white; }
+    .primary:hover:not(:disabled) { background: var(--green-dark); }
+    .secondary { background: var(--blue); color: white; }
+    .light { background: #e8f0ea; color: #245638; }
+    .danger { background: #fff0ef; color: var(--red); border: 1px solid #f0c7c3; }
+    .small-note { color: var(--muted); font-size: 13px; margin: 7px 0 0; }
     .status {
-      border-radius: 9px;
-      padding: 11px;
       margin-top: 10px;
+      padding: 11px;
+      border-radius: 9px;
+      background: #f0f4f1;
       text-align: center;
-      background: #f1f5f2;
       line-height: 1.4;
       overflow-wrap: anywhere;
     }
-    .status.success { background: #e8f5ec; color: #1d6839; }
-    .status.warning { background: #fff4df; color: #875400; }
+    .status.ok { background: #e8f5ec; color: #1d6839; }
+    .status.warn { background: #fff5df; color: #805400; }
     .status.error { background: #fff0ef; color: #a32119; }
-
-    .big {
-      text-align: center;
-      color: var(--green);
-      font-size: clamp(28px, 8vw, 38px);
+    .stat {
+      font-size: 34px;
       font-weight: 800;
-      margin: 9px 0;
+      color: var(--green);
+      text-align: center;
+      margin: 8px 0;
       overflow-wrap: anywhere;
     }
-
-    .current-label { text-align: center; margin: 13px 0 0; font-size: 14px; }
-    #reader { width: 100%; margin: 12px auto 4px; overflow: hidden; border-radius: 10px; }
+    .center { text-align: center; }
+    .muted { color: var(--muted); }
+    #reader { width: 100%; margin: 12px auto 0; overflow: hidden; border-radius: 10px; }
     #reader video { border-radius: 10px; }
-
-    .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .button-row button { margin-top: 9px; }
-
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .row h2 { margin: 0; }
+    .pill {
+      background: #edf3ee;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: #315840;
+      white-space: nowrap;
+    }
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td {
-      padding: 10px 7px;
-      border-bottom: 1px solid #e2e7e3;
       text-align: left;
+      padding: 10px 7px;
+      border-bottom: 1px solid #e5eae6;
       font-size: 13px;
       overflow-wrap: anywhere;
     }
-    th { background: #f4f7f4; }
-    .empty { text-align: center; color: var(--muted); padding: 18px 6px; }
-    .section-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .counter { color: var(--muted); font-size: 13px; white-space: nowrap; }
-
-    @media (max-width: 420px) {
-      body { padding-left: 9px; padding-right: 9px; }
+    th { background: #f5f8f5; }
+    .empty { text-align: center; color: var(--muted); padding: 18px 5px; }
+    .button-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .button-pair button { margin-top: 9px; }
+    @media (max-width: 480px) {
       .card { padding: 14px; }
-      .button-row { grid-template-columns: 1fr; }
+      .button-pair { grid-template-columns: 1fr; }
     }
   </style>
 </head>
-
 <body>
-  <main class="container">
-    <h1>🐄 REGISTRO DE MUESTRAS</h1>
+<main>
+  <h1>🐄 MUESTREO DE LECHE</h1>
+  <p class="subtitle">Asociación de código de frasco con arete de vaca</p>
 
-    <section class="card">
-      <h2>1. Ingresar los 12 aretes</h2>
-      <p>Escribe o pega los números de arete, uno por línea. El sistema asignará cada arete al siguiente frasco escaneado.</p>
-      <textarea id="tagsInput" rows="7" placeholder="45821&#10;45822&#10;45823&#10;45824"></textarea>
-      <p class="hint">Se deben ingresar exactamente 12 aretes diferentes.</p>
-      <button id="startBatchBtn" class="green">INICIAR LOTE</button>
-      <div id="batchStatus" class="status">No hay un lote activo.</div>
-    </section>
+  <section class="card">
+    <h2>1. Ingresar aretes de las vacas</h2>
+    <p>Ingresa todos los números de arete que participarán en el muestreo. Coloca un arete por línea.</p>
+    <textarea id="earTagsInput" placeholder="Ejemplo:&#10;45821&#10;45822&#10;45823&#10;45824"></textarea>
+    <p class="small-note">El orden de la lista determinará el orden de escaneo. Cada frasco escaneado se asociará al siguiente arete.</p>
+    <button class="primary" id="loadTagsBtn">CARGAR LISTA DE ARETES</button>
+    <div id="listStatus" class="status">Aún no se ha cargado una lista de aretes.</div>
+  </section>
 
-    <section class="card">
+  <section class="card">
+    <div class="row">
       <h2>2. Escanear frascos</h2>
-      <div class="section-top">
-        <span class="counter">Progreso del lote</span>
-        <span class="counter" id="progressText">0 / 12</span>
-      </div>
-      <div class="big" id="progressNumber">0 / 12</div>
-      <p class="current-label">Arete correspondiente al siguiente frasco:</p>
-      <div class="big" id="currentTag">---</div>
+      <span class="pill" id="progressPill">0 / 0</span>
+    </div>
+    <p class="center muted">Arete que corresponde al siguiente frasco:</p>
+    <div class="stat" id="currentEarTag">---</div>
+    <div id="reader"></div>
+    <button class="primary" id="openCameraBtn" disabled>📷 ABRIR CÁMARA Y ESCANEAR</button>
+    <div id="scanStatus" class="status">Carga primero la lista de aretes.</div>
+    <p class="small-note">Cada lectura es independiente: al detectar un código, la cámara se detiene automáticamente. Para escanear el siguiente frasco, debes volver a presionar el botón.</p>
+  </section>
 
-      <div id="reader"></div>
-      <button id="cameraBtn" class="green">📷 ABRIR CÁMARA</button>
-      <div id="scanStatus" class="status">Primero inicia un lote de 12 aretes.</div>
-      <p class="hint">Después de leer un código, la cámara se apagará automáticamente. Para leer el siguiente frasco, vuelve a presionar «ABRIR CÁMARA».</p>
-    </section>
-
-    <section class="card">
-      <div class="section-top">
-        <h2>3. Registros acumulados</h2>
-        <span class="counter" id="totalCount">0 muestras</span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>N.º</th>
-              <th>Código de barras</th>
-              <th>Número de arete</th>
-            </tr>
-          </thead>
-          <tbody id="recordsBody">
-            <tr><td colspan="3" class="empty">Todavía no hay registros.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <button id="exportBtn" class="blue">⬇ DESCARGAR EXCEL</button>
-      <button id="nextBatchBtn" class="gray">CARGAR SIGUIENTES 12 ARETES</button>
-    </section>
-  </main>
-
-  <script>
-    "use strict";
-
-    const STORAGE_RECORDS = "muestrasGanado";
-    const STORAGE_BATCHES = "lotesGanado";
-
-    let records = loadJSON(STORAGE_RECORDS, []);
-    let batches = loadJSON(STORAGE_BATCHES, []);
-    let activeBatch = batches.find(batch => batch.status === "active") || null;
-
-    let scanner = null;
-    let cameraRunning = false;
-    let scanLocked = false;
-
-    const $ = id => document.getElementById(id);
-
-    function loadJSON(key, fallback) {
-      try {
-        const value = JSON.parse(localStorage.getItem(key) || "null");
-        return Array.isArray(value) ? value : fallback;
-      } catch (error) {
-        console.warn("No se pudieron recuperar los datos:", error);
-        return fallback;
-      }
-    }
-
-    function persist() {
-      try {
-        localStorage.setItem(STORAGE_RECORDS, JSON.stringify(records));
-        localStorage.setItem(STORAGE_BATCHES, JSON.stringify(batches));
-      } catch (error) {
-        alert("No se pudieron guardar los datos en este dispositivo. Verifica el espacio disponible del navegador.");
-        console.error(error);
-      }
-    }
-
-    function setStatus(elementId, message, type = "") {
-      const element = $(elementId);
-      element.textContent = message;
-      element.className = "status" + (type ? " " + type : "");
-    }
-
-    function render() {
-      const total = records.length;
-      $("totalCount").textContent = `${total} ${total === 1 ? "muestra" : "muestras"}`;
-
-      if (records.length) {
-        $("recordsBody").innerHTML = records.map((record, index) => `
+  <section class="card">
+    <div class="row">
+      <h2>3. Muestras registradas</h2>
+      <span class="pill" id="recordCount">0 registros</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
           <tr>
-            <td>${index + 1}</td>
-            <td>${escapeHTML(record.barcode)}</td>
-            <td>${escapeHTML(record.earTag)}</td>
+            <th>N.º</th>
+            <th>Número de arete</th>
+            <th>Código de barras del frasco</th>
           </tr>
-        `).join("");
-      } else {
-        $("recordsBody").innerHTML = '<tr><td colspan="3" class="empty">Todavía no hay registros.</td></tr>';
-      }
+        </thead>
+        <tbody id="recordsTable">
+          <tr><td colspan="3" class="empty">No hay muestras registradas todavía.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="button-pair">
+      <button class="secondary" id="exportBtn">DESCARGAR EXCEL</button>
+      <button class="light" id="newListBtn">CARGAR OTRA LISTA</button>
+    </div>
+    <button class="danger" id="clearRecordsBtn">BORRAR TODOS LOS REGISTROS</button>
+    <p class="small-note">Los datos se guardan en el almacenamiento local de este navegador y dispositivo.</p>
+  </section>
+</main>
 
-      if (activeBatch) {
-        const done = activeBatch.index;
-        const totalTags = activeBatch.tags.length;
-        $("progressText").textContent = `${done} / ${totalTags}`;
-        $("progressNumber").textContent = `${done} / ${totalTags}`;
-        $("currentTag").textContent = activeBatch.tags[activeBatch.index] || "COMPLETADO";
-        setStatus("batchStatus", `Lote ${activeBatch.number} en proceso. ${totalTags - done} aretes pendientes.`);
-        $("cameraBtn").disabled = done >= totalTags;
-      } else {
-        $("progressText").textContent = "0 / 12";
-        $("progressNumber").textContent = "0 / 12";
-        $("currentTag").textContent = "---";
-        $("cameraBtn").disabled = true;
-      }
+<script>
+"use strict";
+
+const KEY = "muestreoLeche_registros_v1";
+const TAGS_KEY = "muestreoLeche_aretes_v1";
+
+const $ = id => document.getElementById(id);
+
+let records = readStorage(KEY, []);
+let earTags = readStorage(TAGS_KEY, []);
+let nextIndex = records.length;
+let scanner = null;
+let cameraIsRunning = false;
+let processingScan = false;
+
+function readStorage(key, fallback) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "null");
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveData() {
+  localStorage.setItem(KEY, JSON.stringify(records));
+  localStorage.setItem(TAGS_KEY, JSON.stringify(earTags));
+}
+
+function showStatus(id, message, type = "") {
+  const el = $(id);
+  el.textContent = message;
+  el.className = "status" + (type ? " " + type : "");
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[c]);
+}
+
+function render() {
+  $("progressPill").textContent = `${Math.min(nextIndex, earTags.length)} / ${earTags.length}`;
+  $("currentEarTag").textContent = earTags[nextIndex] || (earTags.length ? "LISTA COMPLETADA" : "---");
+  $("openCameraBtn").disabled = !earTags.length || nextIndex >= earTags.length || cameraIsRunning;
+
+  $("recordCount").textContent = `${records.length} ${records.length === 1 ? "registro" : "registros"}`;
+
+  if (records.length) {
+    $("recordsTable").innerHTML = records.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${escapeHTML(r.earTag)}</td>
+        <td>${escapeHTML(r.barcode)}</td>
+      </tr>
+    `).join("");
+  } else {
+    $("recordsTable").innerHTML = '<tr><td colspan="3" class="empty">No hay muestras registradas todavía.</td></tr>';
+  }
+}
+
+function loadTags() {
+  if (cameraIsRunning) {
+    showStatus("listStatus", "Detén la cámara antes de cambiar la lista.", "warn");
+    return;
+  }
+
+  const entered = $("earTagsInput").value
+    .split(/\r?\n/)
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  if (!entered.length) {
+    alert("Ingresa al menos un número de arete.");
+    return;
+  }
+
+  if (new Set(entered).size !== entered.length) {
+    alert("La lista contiene números de arete repetidos. Corrígelos antes de continuar.");
+    return;
+  }
+
+  if (records.length > 0) {
+    const confirmReplace = confirm(
+      "Ya existen registros guardados. Si cargas una nueva lista, se conservarán los registros anteriores y la nueva lista comenzará desde el primer arete. ¿Deseas continuar?"
+    );
+    if (!confirmReplace) return;
+  }
+
+  earTags = entered;
+  nextIndex = 0;
+  saveData();
+  render();
+  showStatus("listStatus", `Lista cargada correctamente: ${earTags.length} aretes.`, "ok");
+  showStatus("scanStatus", "Lista lista. Presiona ABRIR CÁMARA Y ESCANEAR para registrar el primer frasco.");
+}
+
+async function openCamera() {
+  if (!earTags.length || nextIndex >= earTags.length || cameraIsRunning) return;
+
+  if (typeof Html5Qrcode === "undefined") {
+    showStatus("scanStatus", "No se pudo cargar el lector de códigos. Verifica tu conexión a internet y recarga la página.", "error");
+    return;
+  }
+
+  $("openCameraBtn").disabled = true;
+  $("openCameraBtn").textContent = "INICIANDO CÁMARA...";
+  processingScan = false;
+
+  try {
+    if (!scanner) scanner = new Html5Qrcode("reader");
+
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: (width, height) => ({
+          width: Math.min(Math.floor(width * 0.85), 330),
+          height: Math.min(Math.floor(height * 0.35), 180)
+        })
+      },
+      decodedText => handleScan(decodedText),
+      () => {}
+    );
+
+    cameraIsRunning = true;
+    $("openCameraBtn").textContent = "📷 CÁMARA ACTIVA";
+    showStatus("scanStatus", `Cámara activa. Escanea el frasco de la vaca ${earTags[nextIndex]}.`);
+  } catch (error) {
+    console.error(error);
+    cameraIsRunning = false;
+    $("openCameraBtn").disabled = false;
+    $("openCameraBtn").textContent = "📷 ABRIR CÁMARA Y ESCANEAR";
+    showStatus("scanStatus",
+      "No se pudo iniciar la cámara. Permite el acceso y abre esta página desde HTTPS o localhost. " + (error.message || ""),
+      "error");
+  }
+}
+
+async function closeCamera() {
+  if (scanner && cameraIsRunning) {
+    try {
+      await scanner.stop();
+    } catch (error) {
+      console.warn("No se pudo detener la cámara:", error);
     }
+  }
 
-    function escapeHTML(value) {
-      return String(value).replace(/[&<>"']/g, char => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-      })[char]);
-    }
+  cameraIsRunning = false;
+  $("openCameraBtn").textContent = "📷 ABRIR CÁMARA Y ESCANEAR";
+  render();
+}
 
-    function startBatch() {
-      const tags = $("tagsInput").value
-        .split(/\r?\n/)
-        .map(tag => tag.trim())
-        .filter(Boolean);
+async function handleScan(decodedText) {
+  if (processingScan || !cameraIsRunning || nextIndex >= earTags.length) return;
 
-      if (tags.length !== 12) {
-        alert(`Debes ingresar exactamente 12 aretes. Actualmente ingresaste ${tags.length}.`);
-        return;
-      }
+  processingScan = true;
+  const barcode = String(decodedText).trim();
 
-      if (new Set(tags).size !== tags.length) {
-        alert("Hay números de arete repetidos en la lista.");
-        return;
-      }
+  // Se detiene la cámara antes de validar o guardar el resultado.
+  await closeCamera();
 
-      if (activeBatch) {
-        alert("Ya existe un lote activo. Continúa ese lote antes de iniciar otro.");
-        return;
-      }
+  if (!barcode) {
+    showStatus("scanStatus", "No se obtuvo un código válido. Vuelve a abrir la cámara.", "warn");
+    processingScan = false;
+    return;
+  }
 
-      const nextNumber = batches.reduce((max, batch) => Math.max(max, Number(batch.number) || 0), 0) + 1;
-      activeBatch = {
-        number: nextNumber,
-        tags,
-        index: 0,
-        status: "active",
-        createdAt: new Date().toISOString()
-      };
-
-      batches.push(activeBatch);
-      $("tagsInput").value = "";
-      persist();
-      render();
-      setStatus("scanStatus", "Lote iniciado. Presiona ABRIR CÁMARA para escanear el primer frasco.", "success");
-    }
-
-    async function startCamera() {
-      if (!activeBatch) {
-        setStatus("scanStatus", "Primero debes iniciar un lote de 12 aretes.", "warning");
-        return;
-      }
-
-      if (activeBatch.index >= activeBatch.tags.length) {
-        setStatus("scanStatus", "Este lote ya está completo. Carga los siguientes 12 aretes.", "success");
-        return;
-      }
-
-      if (cameraRunning) return;
-
-      if (typeof Html5Qrcode === "undefined") {
-        setStatus("scanStatus", "No se pudo cargar la librería de lectura. Revisa tu conexión a internet y vuelve a cargar la página.", "error");
-        return;
-      }
-
-      scanLocked = false;
-      $("cameraBtn").disabled = true;
-      $("cameraBtn").textContent = "INICIANDO CÁMARA...";
-
-      try {
-        if (!scanner) {
-          scanner = new Html5Qrcode("reader");
-        }
-
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: function(viewWidth, viewHeight) {
-              const width = Math.min(Math.floor(viewWidth * 0.85), 320);
-              const height = Math.min(Math.floor(viewHeight * 0.35), 180);
-              return { width, height };
-            },
-            aspectRatio: 1.777
-          },
-          decodedText => onScan(decodedText),
-          () => {}
-        );
-
-        cameraRunning = true;
-        $("cameraBtn").textContent = "📷 CÁMARA ACTIVA";
-        setStatus("scanStatus", `Cámara activa. Escanea el frasco correspondiente al arete ${activeBatch.tags[activeBatch.index]}.`);
-      } catch (error) {
-        console.error("Error al iniciar cámara:", error);
-        cameraRunning = false;
-        $("cameraBtn").disabled = false;
-        $("cameraBtn").textContent = "📷 ABRIR CÁMARA";
-        setStatus("scanStatus", "No se pudo abrir la cámara. Verifica los permisos y que la página esté en HTTPS o localhost. " + (error.message || ""), "error");
-      }
-    }
-
-    async function stopCamera(updateMessage = true) {
-      if (scanner && cameraRunning) {
-        try {
-          await scanner.stop();
-        } catch (error) {
-          console.warn("La cámara ya estaba detenida o no pudo detenerse:", error);
-        }
-      }
-
-      cameraRunning = false;
-      $("cameraBtn").disabled = !activeBatch || activeBatch.index >= activeBatch.tags.length;
-      $("cameraBtn").textContent = "📷 ABRIR CÁMARA";
-
-      if (updateMessage) {
-        setStatus("scanStatus", "Cámara apagada. Presiona ABRIR CÁMARA para escanear el siguiente frasco.");
-      }
-    }
-
-    async function onScan(code) {
-      if (scanLocked || !activeBatch || !cameraRunning) return;
-
-      scanLocked = true;
-      const scannedCode = String(code).trim();
-
-      // Detener la cámara inmediatamente tras la lectura.
-      await stopCamera(false);
-
-      if (!scannedCode) {
-        setStatus("scanStatus", "La lectura no contiene un código válido. Vuelve a abrir la cámara.", "warning");
-        scanLocked = false;
-        return;
-      }
-
-      // Evitar que un mismo código de barras se registre más de una vez.
-      if (records.some(record => String(record.barcode) === scannedCode)) {
-        setStatus("scanStatus", `Código duplicado: ${scannedCode}. No se guardó y no se avanzó al siguiente arete.`, "error");
-        alert("Este código de barras ya fue registrado. No se guardó y el arete actual no cambió.");
-        scanLocked = false;
-        return;
-      }
-
-      const earTag = activeBatch.tags[activeBatch.index];
-
-      records.push({
-        barcode: scannedCode,
-        earTag,
-        batchNumber: activeBatch.number,
-        scannedAt: new Date().toISOString()
-      });
-
-      activeBatch.index++;
-
-      if (activeBatch.index >= activeBatch.tags.length) {
-        activeBatch.status = "completed";
-        activeBatch.completedAt = new Date().toISOString();
-        setStatus("scanStatus", `¡Lote ${activeBatch.number} completado! Se registraron sus 12 muestras.`, "success");
-        setStatus("batchStatus", `Lote ${activeBatch.number} completado.`, "success");
-        activeBatch = null;
-      } else {
-        setStatus("scanStatus", `Registro guardado: ${earTag}. Código: ${scannedCode}. Cámara apagada. Siguiente arete: ${activeBatch.tags[activeBatch.index]}.`, "success");
-      }
-
-      persist();
-      render();
-      scanLocked = false;
-    }
-
-    function prepareNextBatch() {
-      if (cameraRunning) {
-        alert("Primero detén la cámara.");
-        return;
-      }
-
-      if (activeBatch) {
-        setStatus("batchStatus", `Continúa el lote ${activeBatch.number}; todavía tiene ${activeBatch.tags.length - activeBatch.index} aretes pendientes.`, "warning");
-        setStatus("scanStatus", "Puedes continuar con el siguiente frasco presionando ABRIR CÁMARA.");
-        render();
-        return;
-      }
-
-      $("tagsInput").focus();
-      setStatus("batchStatus", "Ingresa los siguientes 12 aretes y presiona INICIAR LOTE.");
-      setStatus("scanStatus", "Listo para comenzar un nuevo lote.");
-    }
-
-    function exportExcel() {
-      if (!records.length) {
-        alert("Todavía no hay registros para exportar.");
-        return;
-      }
-
-      if (typeof XLSX === "undefined") {
-        alert("No se pudo cargar la librería de Excel. Revisa tu conexión a internet.");
-        return;
-      }
-
-      const rows = [
-        ["N.º", "Código de barras", "Número de arete", "N.º de lote", "Fecha y hora de lectura"],
-        ...records.map((record, index) => [
-          index + 1,
-          String(record.barcode),
-          String(record.earTag),
-          record.batchNumber || "",
-          record.scannedAt ? new Date(record.scannedAt).toLocaleString("es-PE") : ""
-        ])
-      ];
-
-      const worksheet = XLSX.utils.aoa_to_sheet(rows);
-      worksheet["!cols"] = [
-        { wch: 7 }, { wch: 24 }, { wch: 20 }, { wch: 12 }, { wch: 25 }
-      ];
-
-      // Mantener los códigos como texto para conservar ceros iniciales.
-      for (let row = 2; row <= rows.length; row++) {
-        ["B", "C"].forEach(column => {
-          const cell = worksheet[`${column}${row}`];
-          if (cell) cell.t = "s";
-        });
-      }
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Muestras");
-      XLSX.writeFile(workbook, "Muestras_Ganado.xlsx");
-    }
-
-    $("startBatchBtn").addEventListener("click", startBatch);
-    $("cameraBtn").addEventListener("click", startCamera);
-    $("exportBtn").addEventListener("click", exportExcel);
-    $("nextBatchBtn").addEventListener("click", prepareNextBatch);
-
-    // Recuperar el lote pendiente si se recarga o se vuelve a abrir la página.
+  if (records.some(r => String(r.barcode) === barcode)) {
+    showStatus("scanStatus", `El código ${barcode} ya existe. No se guardó y el arete actual no avanzó.`, "error");
+    alert("Código de barras duplicado. No se registró la muestra. Puedes volver a escanear el mismo frasco.");
+    processingScan = false;
     render();
-    if (activeBatch) {
-      setStatus("scanStatus", `Se recuperó el lote ${activeBatch.number}. El siguiente arete es ${activeBatch.tags[activeBatch.index] || "COMPLETADO"}. Presiona ABRIR CÁMARA para continuar.`);
-    }
-  </script>
+    return;
+  }
+
+  const earTag = earTags[nextIndex];
+
+  records.push({
+    earTag: String(earTag),
+    barcode: barcode,
+    dateTime: new Date().toISOString()
+  });
+
+  nextIndex++;
+  saveData();
+  render();
+
+  if (nextIndex >= earTags.length) {
+    showStatus("scanStatus", `Muestreo completado. Se asociaron los ${earTags.length} aretes con sus frascos.`, "ok");
+    showStatus("listStatus", "La lista de aretes fue completada.", "ok");
+  } else {
+    showStatus("scanStatus",
+      `Muestra guardada: arete ${earTag} ↔ frasco ${barcode}. Cámara apagada. El siguiente arete es ${earTags[nextIndex]}.`,
+      "ok");
+  }
+
+  processingScan = false;
+}
+
+function exportExcel() {
+  if (!records.length) {
+    alert("No hay registros para exportar.");
+    return;
+  }
+  if (typeof XLSX === "undefined") {
+    alert("No se pudo cargar el módulo de Excel. Verifica tu conexión a internet.");
+    return;
+  }
+
+  const rows = [
+    ["Número de arete", "Código de barras del frasco", "Fecha y hora"],
+    ...records.map(r => [
+      String(r.earTag),
+      String(r.barcode),
+      new Date(r.dateTime).toLocaleString("es-PE")
+    ])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{ wch: 22 }, { wch: 30 }, { wch: 24 }];
+
+  // Los identificadores se guardan como texto, conservando ceros iniciales.
+  for (let row = 2; row <= rows.length; row++) {
+    ["A", "B"].forEach(col => {
+      const cell = ws[`${col}${row}`];
+      if (cell) cell.t = "s";
+    });
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Muestras");
+  XLSX.writeFile(wb, "Registro_Muestreo_Leche.xlsx");
+}
+
+async function startNewList() {
+  if (cameraIsRunning) await closeCamera();
+
+  const hasPending = nextIndex < earTags.length;
+  if (hasPending && earTags.length) {
+    const proceed = confirm("La lista actual todavía tiene aretes pendientes. ¿Deseas reemplazarla por una nueva lista?");
+    if (!proceed) return;
+  }
+
+  earTags = [];
+  nextIndex = 0;
+  $("earTagsInput").value = "";
+  saveData();
+  render();
+  showStatus("listStatus", "Ingresa la nueva lista de aretes.");
+  showStatus("scanStatus", "Carga primero la lista de aretes.");
+  $("earTagsInput").focus();
+}
+
+async function clearAll() {
+  if (cameraIsRunning) await closeCamera();
+
+  const proceed = confirm("¿Seguro que deseas borrar todos los registros y la lista de aretes guardada? Esta acción no se puede deshacer.");
+  if (!proceed) return;
+
+  records = [];
+  earTags = [];
+  nextIndex = 0;
+  $("earTagsInput").value = "";
+  saveData();
+  render();
+  showStatus("listStatus", "Datos borrados. Puedes cargar una nueva lista.");
+  showStatus("scanStatus", "Carga primero la lista de aretes.");
+}
+
+$("loadTagsBtn").addEventListener("click", loadTags);
+$("openCameraBtn").addEventListener("click", openCamera);
+$("exportBtn").addEventListener("click", exportExcel);
+$("newListBtn").addEventListener("click", startNewList);
+$("clearRecordsBtn").addEventListener("click", clearAll);
+
+// Recupera datos del navegador si la página se vuelve a abrir.
+if (earTags.length) {
+  // El avance se calcula a partir de los registros guardados que coinciden
+  // con la secuencia de aretes de la lista actual.
+  nextIndex = 0;
+  for (const tag of earTags) {
+    const found = records.some(r => String(r.earTag) === String(tag));
+    if (found) nextIndex++;
+    else break;
+  }
+  $("earTagsInput").value = earTags.join("\n");
+  showStatus("listStatus", `Se recuperó una lista de ${earTags.length} aretes.`, "ok");
+  showStatus("scanStatus", nextIndex < earTags.length
+    ? `Se recuperó el avance. El siguiente arete es ${earTags[nextIndex]}.`
+    : "La lista guardada ya fue completada.", "ok");
+}
+
+render();
+</script>
 </body>
 </html>
