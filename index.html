@@ -265,44 +265,72 @@ async function startCamera() {
  }
 }
 
-function onScan(code) {
- if (scanLocked || !activeBatch) return;
- scanLocked = true;
+async function onScan(code) {
 
- if (records.some(r => r.barcode === code)) {
-   document.getElementById("scanStatus").textContent =
-     "Código duplicado. No se guardó.";
-   scanLocked = false;
-   return;
- }
+  if (scanLocked || !activeBatch) return;
 
- const earTag = activeBatch.tags[activeBatch.index];
+  scanLocked = true;
 
- records.push({
-   barcode: code,
-   earTag: earTag
- });
+  try {
 
- activeBatch.index++;
+    // Evitar códigos duplicados
+    if (records.some(r => r.barcode === code)) {
+      document.getElementById("scanStatus").textContent =
+        "⚠️ Código duplicado. Escanea otro frasco.";
 
- if (activeBatch.index === activeBatch.tags.length) {
-   activeBatch.status = "completed";
-   activeBatch = null;
-   document.getElementById("scanStatus").textContent =
-     "¡Lote completado! Carga los siguientes 12 aretes.";
- } else {
-   document.getElementById("scanStatus").textContent =
-     "Registro guardado correctamente.";
- }
+      return;
+    }
 
- persist();
- render();
+    // Obtener el arete actual
+    const earTag = activeBatch.tags[activeBatch.index];
 
- if (cameraRunning && scanner) {
-   scanner.pause(true);
- }
+    // Guardar asociación
+    records.push({
+      barcode: code,
+      earTag: earTag
+    });
 
- scanLocked = false;
+    // Avanzar al siguiente arete
+    activeBatch.index++;
+
+    // Guardar información
+    persist();
+
+    // Actualizar pantalla
+    render();
+
+    if (activeBatch.index >= activeBatch.tags.length) {
+
+      activeBatch.status = "completed";
+      activeBatch = null;
+
+      document.getElementById("scanStatus").textContent =
+        "✅ Lote completado. Carga los siguientes 12 aretes.";
+
+      return;
+    }
+
+    document.getElementById("scanStatus").textContent =
+      "✅ Registro guardado. Siguiente arete: " +
+      activeBatch.tags[activeBatch.index];
+
+  } catch (error) {
+
+    alert("Error al guardar: " + error);
+
+  } finally {
+
+    scanLocked = false;
+
+    // Reactivar escáner automáticamente
+    if (scanner && cameraRunning && activeBatch) {
+      try {
+        scanner.resume();
+      } catch (error) {
+        console.log("No se pudo reactivar:", error);
+      }
+    }
+  }
 }
 
 function exportExcel() {
