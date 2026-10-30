@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registro de muestras bovinas</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<style>
+body {
+  font-family: Arial;
+  background: #eef2ef;
+  padding: 15px;
+  color: #243328;
+}
+.container { max-width: 500px; margin: auto; }
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 17px;
+  margin-bottom: 15px;
+}
+h2 { text-align: center; }
+input, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px;
+  margin: 8px 0;
+  font-size: 17px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+}
+button {
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 8px;
+  margin-top: 9px;
+  font-size: 16px;
+  font-weight: bold;
+}
+.green { background: #287849; color: white; }
+.blue { background: #176b9b; color: white; }
+.gray { background: #e4eee6; color: #245638; }
+.big {
+  font-size: 35px;
+  font-weight: bold;
+  color: #287849;
+  text-align: center;
+}
+.status { text-align: center; padding: 10px; }
+table { width: 100%; border-collapse: collapse; }
+td, th {
+  padding: 8px 4px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>🐄 REGISTRO DE MUESTRAS</h2>
+
+<div class="card">
+<h3>1. Ingresar los 12 aretes</h3>
+<p>Escribe un arete por línea:</p>
+
+<textarea id="tags" rows="7"
+placeholder="45821&#10;45822&#10;45823&#10;45824"></textarea>
+
+<button class="green" onclick="startBatch()">
+INICIAR LOTE
+</button>
+</div>
+
+<div class="card">
+<h3>2. Escanear frascos</h3>
+
+<div id="batchInfo" class="status">
+No hay lote activo
+</div>
+
+<div class="big" id="progress">0 / 12</div>
+
+<p style="text-align:center">Arete correspondiente al siguiente frasco:</p>
+
+<div class="big" id="currentTag">---</div>
+
+<div id="reader"></div>
+
+<button class="green" onclick="startCamera()">
+📷 ABRIR CÁMARA
+</button>
+
+<div id="scanStatus" class="status">
+Esperando escaneo
+</div>
+
+</div>
+
+<div class="card">
+<h3>3. Registros acumulados</h3>
+<div class="big" id="total">0</div>
+<p style="text-align:center">Muestras registradas</p>
+
+<table>
+<thead>
+<tr>
+<th>Código de barras</th>
+<th>Número de arete</th>
+</tr>
+</thead>
+<tbody id="records"></tbody>
+</table>
+
+<button class="blue" onclick="exportExcel()">
+DESCARGAR EXCEL
+</button>
+
+<button class="gray" onclick="newBatch()">
+CARGAR SIGUIENTES 12 ARETES
+</button>
+</div>
+
+</div>
+
+<script>
+let records = JSON.parse(
+ localStorage.getItem("muestrasGanado") || "[]"
+);
+
+let batches = JSON.parse(
+ localStorage.getItem("lotesGanado") || "[]"
+);
+
+let activeBatch = null;
+let scanner = null;
+let cameraRunning = false;
+let scanLocked = false;
+
+function persist() {
+ localStorage.setItem("muestrasGanado",
+                      JSON.stringify(records));
+ localStorage.setItem("lotesGanado",
+                      JSON.stringify(batches));
+}
+
+function render() {
+ document.getElementById("total").textContent =
+   records.length;
+
+ document.getElementById("records").innerHTML =
+   records.map(r => `<tr>
+   <td>${escapeHTML(r.barcode)}</td>
+   <td>${escapeHTML(r.earTag)}</td>
+   </tr>`).join("");
+
+ if (activeBatch) {
+   const done = activeBatch.tags.length -
+                activeBatch.index;
+
+   document.getElementById("progress").textContent =
+     activeBatch.index + " / " +
+     activeBatch.tags.length;
+
+   document.getElementById("currentTag").textContent =
+     activeBatch.tags[activeBatch.index] || "COMPLETADO";
+
+   document.getElementById("batchInfo").textContent =
+     "Lote " + activeBatch.number;
+ }
+}
+
+function escapeHTML(value) {
+ return String(value).replace(/[&<>"']/g, c => ({
+  "&":"&amp;", "<":"&lt;", ">":"&gt;",
+  '"':"&quot;", "'":"&#39;"
+ })[c]);
+}
+
+function startBatch() {
+ const tags = document.getElementById("tags")
+   .value.split(/\n/)
+   .map(t => t.trim())
+   .filter(Boolean);
+
+ if (tags.length !== 12) {
+   alert("Debes ingresar exactamente 12 aretes.");
+   return;
+ }
+
+ if (new Set(tags).size !== tags.length) {
+   alert("Hay aretes repetidos en la lista.");
+   return;
+ }
+
+ if (batches.some(b => b.status === "active")) {
+   alert("Termina o continúa el lote activo primero.");
+   return;
+ }
+
+ const number = batches.length + 1;
+
+ activeBatch = {
+   number,
+   tags,
+   index: 0,
+   status: "active"
+ };
+
+ batches.push(activeBatch);
+ document.getElementById("tags").value = "";
+
+ persist();
+ render();
+}
+
+function newBatch() {
+ if (activeBatch &&
+     activeBatch.index < activeBatch.tags.length) {
+   alert("Primero debes completar el lote actual.");
+   return;
+ }
+
+ activeBatch = null;
+ document.getElementById("progress").textContent = "0 / 12";
+ document.getElementById("currentTag").textContent = "---";
+ document.getElementById("batchInfo").textContent =
+   "Ingresa los siguientes 12 aretes";
+ document.getElementById("tags").focus();
+}
+
+async function startCamera() {
+ if (!window.isSecureContext ||
+     !navigator.mediaDevices?.getUserMedia) {
+   alert("Abre esta página desde una dirección HTTPS.");
+   return;
+ }
+
+ if (!activeBatch ||
+     activeBatch.index >= activeBatch.tags.length) {
+   alert("Primero inicia un lote de 12 aretes.");
+   return;
+ }
+
+ if (cameraRunning) return;
+
+ if (!scanner) scanner = new Html5Qrcode("reader");
+
+ try {
+   await scanner.start(
+     { facingMode: "environment" },
+     { fps: 10, qrbox: { width: 260, height: 130 } },
+     onScan,
+     () => {}
+   );
+   cameraRunning = true;
+ } catch (e) {
+   alert("Error de cámara: " + e.message);
+ }
+}
+
+function onScan(code) {
+ if (scanLocked || !activeBatch) return;
+ scanLocked = true;
+
+ if (records.some(r => r.barcode === code)) {
+   document.getElementById("scanStatus").textContent =
+     "Código duplicado. No se guardó.";
+   scanLocked = false;
+   return;
+ }
+
+ const earTag = activeBatch.tags[activeBatch.index];
+
+ records.push({
+   barcode: code,
+   earTag: earTag
+ });
+
+ activeBatch.index++;
+
+ if (activeBatch.index === activeBatch.tags.length) {
+   activeBatch.status = "completed";
+   activeBatch = null;
+   document.getElementById("scanStatus").textContent =
+     "¡Lote completado! Carga los siguientes 12 aretes.";
+ } else {
+   document.getElementById("scanStatus").textContent =
+     "Registro guardado correctamente.";
+ }
+
+ persist();
+ render();
+
+ if (cameraRunning && scanner) {
+   scanner.pause(true);
+ }
+
+ scanLocked = false;
+}
+
+function exportExcel() {
+ if (!records.length) {
+   alert("No hay registros.");
+   return;
+ }
+
+ const rows = [
+   ["Código de barras", "Número de arete"],
+   ...records.map(r => [r.barcode, r.earTag])
+ ];
+
+ const sheet = XLSX.utils.aoa_to_sheet(rows);
+
+ // Conservar códigos como texto
+ records.forEach((r, i) => {
+   sheet["A" + (i + 2)].t = "s";
+   sheet["B" + (i + 2)].t = "s";
+ });
+
+ const book = XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(book, sheet, "Muestras");
+
+ XLSX.writeFile(book, "Muestras_Ganado.xlsx");
+}
+
+render();
+</script>
+</body>
+</html>
