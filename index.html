@@ -139,6 +139,9 @@ let batches = JSON.parse(
 );
 
 let activeBatch = null;
+activeBatch = batches.find(
+  b => b.status === "active"
+) || null;
 let scanner = null;
 let cameraRunning = false;
 let scanLocked = false;
@@ -255,6 +258,67 @@ function newBatch() {
     "Listo para comenzar otro lote.";
 
   document.getElementById("tags").focus();
+}
+async function startCamera() {
+
+  if (!window.isSecureContext) {
+    alert("Debes abrir la aplicación mediante HTTPS.");
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    alert("Tu navegador no permite utilizar la cámara.");
+    return;
+  }
+
+  if (!activeBatch) {
+    alert("No hay un lote activo. Recupera o inicia uno.");
+    return;
+  }
+
+  if (activeBatch.index >= activeBatch.tags.length) {
+    alert("El lote ya está completo.");
+    return;
+  }
+
+  if (cameraRunning) {
+    return;
+  }
+
+  try {
+
+    if (!scanner) {
+      scanner = new Html5Qrcode("reader");
+    }
+
+    document.getElementById("scanStatus").textContent =
+      "Iniciando cámara...";
+
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 130 }
+      },
+      onScan,
+      () => {}
+    );
+
+    cameraRunning = true;
+
+    document.getElementById("scanStatus").textContent =
+      "Cámara activa. Escanea el siguiente frasco.";
+
+  } catch (error) {
+
+    cameraRunning = false;
+
+    alert(
+      "Error al abrir cámara: " +
+      (error?.message || error?.name || String(error))
+    );
+
+  }
 }
 
 async function onScan(code) {
