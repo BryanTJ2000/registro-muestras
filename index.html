@@ -221,48 +221,40 @@ function startBatch() {
 }
 
 function newBatch() {
- if (activeBatch &&
-     activeBatch.index < activeBatch.tags.length) {
-   alert("Primero debes completar el lote actual.");
-   return;
- }
 
- activeBatch = null;
- document.getElementById("progress").textContent = "0 / 12";
- document.getElementById("currentTag").textContent = "---";
- document.getElementById("batchInfo").textContent =
-   "Ingresa los siguientes 12 aretes";
- document.getElementById("tags").focus();
-}
+  // Revisar si existe un lote incompleto
+  const pending = batches.find(
+    b => b.status === "active"
+  );
 
-async function startCamera() {
- if (!window.isSecureContext ||
-     !navigator.mediaDevices?.getUserMedia) {
-   alert("Abre esta página desde una dirección HTTPS.");
-   return;
- }
+  if (pending) {
 
- if (!activeBatch ||
-     activeBatch.index >= activeBatch.tags.length) {
-   alert("Primero inicia un lote de 12 aretes.");
-   return;
- }
+    activeBatch = pending;
 
- if (cameraRunning) return;
+    document.getElementById("batchInfo").textContent =
+      "Continuando lote " + pending.number;
 
- if (!scanner) scanner = new Html5Qrcode("reader");
+    document.getElementById("scanStatus").textContent =
+      "Puedes continuar con el siguiente frasco.";
 
- try {
-   await scanner.start(
-     { facingMode: "environment" },
-     { fps: 10, qrbox: { width: 260, height: 130 } },
-     onScan,
-     () => {}
-   );
-   cameraRunning = true;
- } catch (e) {
-   alert("Error de cámara: " + e.message);
- }
+    render();
+
+    return;
+  }
+
+  // No existe lote pendiente: permitir uno nuevo
+  activeBatch = null;
+
+  document.getElementById("progress").textContent = "0 / 12";
+  document.getElementById("currentTag").textContent = "---";
+
+  document.getElementById("batchInfo").textContent =
+    "Ingresa los siguientes 12 aretes";
+
+  document.getElementById("scanStatus").textContent =
+    "Listo para comenzar otro lote.";
+
+  document.getElementById("tags").focus();
 }
 
 async function onScan(code) {
